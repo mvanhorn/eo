@@ -218,6 +218,44 @@ final class StUnhexTest {
 
     @ParameterizedTest
     @MethodSource("shifts")
+    void keepsOddLengthNumberBytesUnconverted(final Shift shift, final String type) {
+        MatcherAssert.assertThat(
+            String.format(
+                "StUnhex by %s must preserve an incomplete number byte, but it didn't",
+                type
+            ),
+            new Xsline(new StUnhex(shift)).pass(
+                new XMLDocument(
+                    "<p><o base='Φ.number'><o base='Φ.bytes'><o>40-49-0F-D</o></o></o></p>"
+                )
+            ),
+            XhtmlMatchers.hasXPath(
+                "//o[@base='Φ.number' and o[@base='Φ.bytes' and not(o) and text()='40-49-0F-D']]"
+            )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("shifts")
+    void keepsOddLengthStringBytesUnconverted(final Shift shift, final String type) {
+        MatcherAssert.assertThat(
+            String.format(
+                "StUnhex by %s must preserve an incomplete string byte, but it didn't",
+                type
+            ),
+            new Xsline(new StUnhex(shift)).pass(
+                new XMLDocument(
+                    "<p><o base='Φ.string'><o base='Φ.bytes'><o>41-4</o></o></o></p>"
+                )
+            ),
+            XhtmlMatchers.hasXPath(
+                "//o[@base='Φ.string' and o[@base='Φ.bytes' and not(o) and text()='41-4']]"
+            )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("shifts")
     void keepsMalformedBytesUnconverted(final Shift shift, final String type) {
         MatcherAssert.assertThat(
             String.format(

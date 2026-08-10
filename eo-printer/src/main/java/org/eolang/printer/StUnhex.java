@@ -40,24 +40,25 @@ final class StUnhex extends StEnvelope {
         ),
         new StXnav(
             StUnhex.elements("number"),
-            xnav -> {
-                final ByteBuffer buffer = StUnhex.buffer(
-                    StUnhex.undash(xnav.element("o").text().orElse(""))
-                );
-                if (buffer.remaining() == Double.BYTES) {
-                    final double number = buffer.getDouble();
-                    if (!Double.isNaN(number) && !Double.isInfinite(number)) {
-                        new Payload(xnav).replace(StUnhex.number(number));
+            xnav -> StUnhex.buffer(
+                StUnhex.undash(xnav.element("o").text().orElse(""))
+            ).ifPresent(
+                buffer -> {
+                    if (buffer.remaining() == Double.BYTES) {
+                        final double number = buffer.getDouble();
+                        if (!Double.isNaN(number) && !Double.isInfinite(number)) {
+                            new Payload(xnav).replace(StUnhex.number(number));
+                        }
                     }
                 }
-            }
+            )
         ),
         new StXnav(
             StUnhex.elements("string"),
-            xnav -> StUnhex.decode(
-                StUnhex.buffer(
-                    StUnhex.undash(xnav.element("o").text().orElse(""))
-                ).array()
+            xnav -> StUnhex.buffer(
+                StUnhex.undash(xnav.element("o").text().orElse(""))
+            ).flatMap(
+                buffer -> StUnhex.decode(buffer.array())
             ).ifPresent(
                 decoded -> new Payload(xnav).replace(
                     String.format("\"%s\"", StUnhex.escape(decoded))
@@ -106,16 +107,24 @@ final class StUnhex extends StEnvelope {
     /**
      * Make a byte buffer from a string.
      * @param txt The text
-     * @return The buffer of bytes
+     * @return The buffer of bytes, or empty if the final byte is incomplete
      */
-    private static ByteBuffer buffer(final String txt) {
+    private static Optional<ByteBuffer> buffer(final String txt) {
         final int len = txt.length();
-        final ByteBuffer buffer = ByteBuffer.allocate(len / 2);
-        for (int idx = 0; idx < len; idx += 2) {
-            buffer.put((byte) Integer.parseInt(txt.substring(idx, idx + 2), 16));
+        final Optional<ByteBuffer> result;
+        if (len % 2 == 0) {
+            final ByteBuffer buffer = ByteBuffer.allocate(len / 2);
+            for (int idx = 0; idx < len; idx += 2) {
+                buffer.put(
+                    (byte) Integer.parseInt(txt.substring(idx, idx + 2), 16)
+                );
+            }
+            buffer.position(0);
+            result = Optional.of(buffer);
+        } else {
+            result = Optional.empty();
         }
-        buffer.position(0);
-        return buffer;
+        return result;
     }
 
     /**
